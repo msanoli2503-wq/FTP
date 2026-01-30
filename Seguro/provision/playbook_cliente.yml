@@ -1,0 +1,44 @@
+---
+- name: Configurar Máquina Cliente
+  hosts: cliente
+  become: yes
+  tasks:
+
+    - name: 1. Actualizar repositorios e instalar paquetes
+      apt:
+        name:
+          - ftp
+          - curl
+          - lftp  # Útil para pruebas de FTP Seguro (SSL)
+        state: present
+        update_cache: yes
+
+    - name: 2. Simular DNS en /etc/hosts
+      lineinfile:
+        path: /etc/hosts
+        line: "192.168.56.10 ftp.example.test"
+        state: present
+
+    - name: 3. Crear usuario Pepe
+      user:
+        name: pepe
+        password: "{{ 'pepe' | password_hash('sha512') }}"
+        shell: /bin/bash
+        home: /home/pepe
+        state: present
+
+    - name: 4. Crear directorio de pruebas para Pepe
+      file:
+        path: /home/pepe/pruebasFTP
+        state: directory
+        owner: pepe
+        group: pepe
+        mode: '0755'
+
+    - name: 5. Crear archivo de datos de prueba
+      copy:
+        dest: /home/pepe/pruebasFTP/datos1.txt
+        content: "Datos de prueba\n"
+        owner: pepe
+        group: pepe
+        mode: '0644'

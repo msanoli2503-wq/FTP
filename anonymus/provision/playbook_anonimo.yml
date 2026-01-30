@@ -1,0 +1,70 @@
+---
+- name: Configuración Servidor FTP Anónimo (Práctica OpenSuse)
+  hosts: servidor
+  become: yes
+  tasks:
+
+    - name: 1. Instalar vsftpd
+      apt:
+        name: vsftpd
+        state: present
+        update_cache: yes
+
+    - name: 2. Copia de seguridad del fichero original
+      copy:
+        src: /etc/vsftpd.conf
+        dest: /etc/vsftpd.conf.bak
+        remote_src: yes
+        force: no
+
+    - name: 3. Configurar vsftpd.conf (Configuración Anónima)
+      copy:
+        dest: /etc/vsftpd.conf
+        content: |
+          listen=YES
+          listen_ipv6=NO
+
+          # --- Mensaje de Bienvenida (Banner) ---
+          ftpd_banner=-- Mirror de Opensuse para 'sistema.sol'
+
+          # --- Configuración Anónima ---
+          anonymous_enable=YES
+          local_enable=NO
+          
+          # --- Permisos (Solo lectura) ---
+          write_enable=NO
+          anon_upload_enable=NO
+          anon_mkdir_write_enable=NO
+
+          # --- Mensajes de directorio ---
+          dirmessage_enable=YES
+
+          # --- Límites y Tiempos ---
+          max_clients=200
+          # 50KB = 51200 bytes
+          anon_max_rate=51200
+          idle_session_timeout=30
+
+      notify: Reiniciar vsftpd
+
+    - name: 4. Crear fichero de mensaje (.message)
+      copy:
+        dest: /srv/ftp/.message
+        content: |
+          --
+          -- Servidor anónimo
+          -- Máximo de 200 conexiones activas simultáneas.
+          -- Ancho de banda de 50KB por usuario
+          -- Timeout de inactividad de 30 segundos
+          --
+
+    - name: 5. Generar archivo de prueba de velocidad (100MB)
+      command: dd if=/dev/zero of=/srv/ftp/test_speed_100MB.iso bs=1M count=100
+      args:
+        creates: /srv/ftp/test_speed_100MB.iso
+
+  handlers:
+    - name: Reiniciar vsftpd
+      service:
+        name: vsftpd
+        state: restarted
